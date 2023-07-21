@@ -6,7 +6,8 @@ import zipfile
 
 import gradio as gr
 import pandas as pd
-from huggingface_hub import list_models
+from huggingface_hub import list_models, ModelFilter
+from loguru import logger
 
 from autotrain import logger
 from autotrain.dataset import AutoTrainDataset, AutoTrainDreamboothDataset, AutoTrainImageClassificationDataset
@@ -17,13 +18,14 @@ from autotrain.utils import get_project_cost, get_user_token, user_authenticatio
 
 
 APP_TASKS = {
-    "Natural Language Processing": ["Text Classification"],
+    "Natural Language Processing": ["Text Classification", "Text Regression", "LLM Finetuning"],
     # "Tabular": TABULAR_TASKS,
     "Computer Vision": ["Image Classification", "Dreambooth"],
 }
 
 APP_TASKS_MAPPING = {
     "Text Classification": "text_multi_class_classification",
+    "Text Regression": "text_single_column_regression",
     "LLM Finetuning": "lm_training",
     "Image Classification": "image_multi_class_classification",
     "Dreambooth": "dreambooth",
@@ -31,6 +33,7 @@ APP_TASKS_MAPPING = {
 
 APP_TASK_TYPE_MAPPING = {
     "text_classification": "Natural Language Processing",
+    "text_regression": "Natural Language Processing",
     "lm_training": "Natural Language Processing",
     "image_classification": "Computer Vision",
     "dreambooth": "Computer Vision",
@@ -100,7 +103,7 @@ def _update_model_choice(task, autotrain_backend):
 
 def _update_file_type(task):
     task = APP_TASKS_MAPPING[task]
-    if task in ("text_multi_class_classification", "lm_training"):
+    if task in ("text_multi_class_classification", "text_single_column_regression", "lm_training"):
         return gr.Radio.update(
             value="CSV",
             choices=["CSV", "JSONL"],
@@ -159,7 +162,7 @@ def _task_type_update(task_type, autotrain_backend):
 
 def _update_col_map(training_data, task):
     task = APP_TASKS_MAPPING[task]
-    if task == "text_multi_class_classification":
+    if task == "text_multi_class_classification" or "text_single_column_regression":
         data_cols = pd.read_csv(training_data[0].name, nrows=2).columns.tolist()
         return [
             gr.Dropdown.update(visible=True, choices=data_cols, label="Map `text` column", value=data_cols[0]),
@@ -336,6 +339,9 @@ def _update_hub_model_choices(task, model_choice):
         hub_models1 = list_models(filter="fill-mask", sort="downloads", direction=-1, limit=100)
         hub_models2 = list_models(filter="text-classification", sort="downloads", direction=-1, limit=100)
         hub_models = list(hub_models1) + list(hub_models2)
+    elif task == "text_single_column_regression":
+        text_regression_filter = ModelFilter(library="transformers", task="fill-mask")
+        hub_models = list(list_models(filter=text_regression_filter, sort="downloads", direction=-1, limit=100))
     elif task == "lm_training":
         hub_models = list(list_models(filter="text-generation", sort="downloads", direction=-1, limit=100))
     elif task == "image_multi_class_classification":
@@ -449,6 +455,22 @@ def _create_project(
             percent_valid=None,  # TODO: add to UI
         )
     elif task == "text_multi_class_classification":
+        training_data = [f.name for f in training_data]
+        if validation_data is None:
+            validation_data = []
+        else:
+            validation_data = [f.name for f in validation_data]
+        dset = AutoTrainDataset(
+            train_data=training_data,
+            task=task,
+            token=user_token,
+            project_name=project_name,
+            username=autotrain_username,
+            column_mapping={"text": col_map_text, "label": col_map_label},
+            valid_data=validation_data,
+            percent_valid=None,  # TODO: add to UI
+        )
+    elif task == "text_single_column_regression":
         training_data = [f.name for f in training_data]
         if validation_data is None:
             validation_data = []
