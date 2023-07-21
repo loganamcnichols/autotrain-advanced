@@ -278,7 +278,13 @@ class Project:
                 huggingface_token=self.token,
                 model_path=model_path,
             )
-        
+        elif payload["task"] == 25:
+            _ = train_dreambooth(
+                co2_tracker=co2_tracker,
+                payload=payload,
+                huggingface_token=self.token,
+                model_path=model_path,
+            )
         elif payload["task"] == 9:
             _ = train_lm(
                 co2_tracker=co2_tracker,
@@ -295,6 +301,9 @@ class Project:
             )
         else:
             raise NotImplementedError
+
+        # remove the training tracker file in /tmp/, using rm
+        os.remove(os.path.join("/tmp", "training"))
 
     def create(self, local=False):
         """Create a project and return it"""
