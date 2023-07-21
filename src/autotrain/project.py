@@ -80,6 +80,7 @@ class Project:
         from autotrain.trainers.image_classification import train as train_image_classification
         from autotrain.trainers.lm_trainer import train as train_lm
         from autotrain.trainers.text_classification import train as train_text_classification
+        from autotrain.trainers.text_regression import train as train_text_regression
 
         # check if training tracker file exists in /tmp/
         if os.path.exists(os.path.join("/tmp", "training")):
@@ -111,13 +112,7 @@ class Project:
                 huggingface_token=self.token,
                 model_path=model_path,
             )
-        elif payload["task"] == 25:
-            _ = train_dreambooth(
-                co2_tracker=co2_tracker,
-                payload=payload,
-                huggingface_token=self.token,
-                model_path=model_path,
-            )
+        
         elif payload["task"] == 9:
             _ = train_lm(
                 co2_tracker=co2_tracker,
@@ -125,11 +120,15 @@ class Project:
                 huggingface_token=self.token,
                 model_path=model_path,
             )
+        elif payload["task"] == 10:
+            _ = train_text_regression(
+                    co2_tracker=co2_tracker,
+                    payload=payload,
+                    huggingface_token=self.token,
+                    model_path=model_path,
+            )
         else:
             raise NotImplementedError
-
-        # remove the training tracker file in /tmp/, using rm
-        os.remove(os.path.join("/tmp", "training"))
 
     def create(self, local=False):
         """Create a project and return it"""
