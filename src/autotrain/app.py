@@ -339,7 +339,7 @@ def _update_hub_model_choices(task, model_choice):
         hub_models2 = list_models(filter="text-classification", sort="downloads", direction=-1, limit=100)
         hub_models = list(hub_models1) + list(hub_models2)
     elif task == "text_single_column_regression":
-        text_regression_filter = ModelFilter(library="transformers", task="fill-mask")
+        text_regression_filter = ModelFilter(library="transformers")
         hub_models = list(list_models(filter=text_regression_filter, sort="downloads", direction=-1, limit=100))
     elif task == "lm_training":
         hub_models = list(list_models(filter="text-generation", sort="downloads", direction=-1, limit=100))
@@ -363,8 +363,10 @@ def _update_hub_model_choices(task, model_choice):
             interactive=True,
         )
 
+    choices = [m["id"] for m in hub_models]
+    choices += ["meta-llama/Llama-2-7b","meta-llama/Llama-2-70b-hf"]
     return gr.Dropdown.update(
-        choices=[m["id"] for m in hub_models],
+        choices=choices,
         value=hub_models[0]["id"],
         visible=True,
         interactive=True,
