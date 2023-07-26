@@ -71,7 +71,7 @@ class LLMRegressionParams(BaseModel):
     trainer: str = Field("default", title="Trainer type")
     target_modules: str = Field(None, title="Target modules")
 
-class LLMRegressionParams(BaseModel):
+class SingleColumnRegressionParams(BaseModel):
     model_name: str = Field("gpt2", title="Model name")
     data_path: str = Field("data", title="Data path")
     train_split: str = Field("train", title="Train data config")
