@@ -1,10 +1,11 @@
 import os
 import sys
-from functools import partial
 
 import pandas as pd
 import torch
-from datasets import Dataset, load_dataset
+from datasets import load_dataset
+from datasets import Dataset as DS
+from sklearn import metrics
 from huggingface_hub import HfApi
 from loguru import logger
 from peft import LoraConfig, get_peft_model, prepare_model_for_int8_training
@@ -12,16 +13,18 @@ from transformers import (
     AutoConfig,
     AutoModelForSequenceClassification,
     AutoTokenizer,
-    BitsAndBytesConfig,
+    EarlyStoppingCallback,
     Trainer,
     TrainingArguments,
     default_data_collator,
 )
-from trl import SFTTrainer
 
 from autotrain.trainers import utils
-from autotrain.trainers.callbacks import LoadBestPeftModelCallback, SavePeftModelCallback
 
+
+TEXT_COLUMN = "autotrain_text"
+LABEL_COLUMN = "autotrain_label"
+FP32_MODELS = ("t5", "mt5", "pegasus", "longt5", "bigbird_pegasus")
 
 class Dataset:
     def __init__(self, data, tokenizer, config):
@@ -88,7 +91,7 @@ def train(config):
         if os.path.exists(train_path):
             logger.info("loading dataset from csv")
             train_data = pd.read_csv(train_path)
-            train_data = Dataset.from_pandas(train_data)
+            train_data = DS.from_pandas(train_data)
         else:
             train_data = load_dataset(
                 config.data_path,
@@ -101,15 +104,13 @@ def train(config):
         if os.path.exists(valid_path):
             logger.info("loading dataset from csv")
             valid_data = pd.read_csv(valid_path)
-            valid_data = Dataset.from_pandas(valid_data)
+            valid_data = DS.from_pandas(valid_data)
         else:
             valid_data = load_dataset(
                 config.data_path,
                 split=config.valid_split,
                 use_auth_token=config.huggingface_token,
             )
-
-
 
     tokenizer = AutoTokenizer.from_pretrained(
         config.model_name,
