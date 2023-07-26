@@ -80,7 +80,7 @@ class Project:
         from autotrain.trainers.image_classification import train as train_image_classification
         from autotrain.trainers.lm_trainer import train as train_lm
         from autotrain.trainers.text_classification import train as train_text_classification
-        from autotrain.trainers.text_regression import train as train_text_regression
+        from autotrain.trainers.text_regression import train_app as train_text_regression
 
         # check if training tracker file exists in /tmp/
         if os.path.exists(os.path.join("/tmp", "training")):

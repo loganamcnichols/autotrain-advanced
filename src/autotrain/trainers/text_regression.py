@@ -1,19 +1,24 @@
 import os
+import pandas as pd
 
 import torch
 from datasets import load_dataset
+from datasets import Dataset as DS
 from loguru import logger
 from sklearn import metrics
+from peft import LoraConfig, get_peft_model, prepare_model_for_int8_training
 from transformers import (
     AutoConfig,
     AutoModelForSequenceClassification,
     AutoTokenizer,
     EarlyStoppingCallback,
+    BitsAndBytesConfig,
     Trainer,
     TrainingArguments,
 )
 
-from autotrain import utils
+from autotrain import utils as app_utils
+from autotrain.trainers import utils as cli_utils
 from autotrain.params import TextSingleColumnRegressionParams
 
 
@@ -98,9 +103,192 @@ def _regression_metrics(pred):
     return results
 
 
-@utils.job_watcher
-def train(co2_tracker, payload, huggingface_token, model_path):
-    model_repo = utils.create_repo(
+def train(config):
+    if isinstance(config, dict):
+        config = cli_utils.LLMTrainingParams(**config)
+
+    # TODO: remove when SFT is fixed
+    if config.trainer == "sft":
+        config.trainer = "default"
+
+    # check if config.train_split.csv exists in config.data_path
+    if config.train_split is not None:
+        train_path = f"{config.data_path}/{config.train_split}.csv"
+        if os.path.exists(train_path):
+            logger.info("loading dataset from csv")
+            train_data = pd.read_csv(train_path)
+            train_data = DS.from_pandas(train_data)
+        else:
+            train_data = load_dataset(
+                config.data_path,
+                split=config.train_split,
+                use_auth_token=config.huggingface_token,
+            )
+
+    if config.valid_split is not None:
+        valid_path = f"{config.data_path}/{config.valid_split}.csv"
+        if os.path.exists(valid_path):
+            logger.info("loading dataset from csv")
+            valid_data = pd.read_csv(valid_path)
+            valid_data = DS.from_pandas(valid_data)
+        else:
+            valid_data = load_dataset(
+                config.data_path,
+                split=config.valid_split,
+                use_auth_token=config.huggingface_token,
+            )
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        config.model_name,
+        use_auth_token=config.huggingface_token,
+        trust_remote_code=True,
+    )
+
+    if tokenizer.model_max_length > 2048:
+        tokenizer.model_max_length = config.model_max_length
+
+    if getattr(tokenizer, "pad_token", None) is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    model_config = AutoConfig.from_pretrained(
+        config.model_name,
+        use_auth_token=config.huggingface_token,
+        trust_remote_code=True,
+    )
+
+    if config.use_peft:
+        if config.use_int4:
+            bnb_config = BitsAndBytesConfig(
+                load_in_4bit=config.use_int4,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=False,
+            )
+        elif config.use_int8:
+            bnb_config = BitsAndBytesConfig(load_in_8bit=config.use_int8)
+        else:
+            bnb_config = BitsAndBytesConfig()
+
+        model = AutoModelForSequenceClassification.from_pretrained(
+            config.model_name,
+            config=model_config,
+            use_auth_token=config.huggingface_token,
+            quantization_config=bnb_config,
+            torch_dtype=torch.float16,
+            device_map="auto",
+            trust_remote_code=True,
+        )
+    else:
+        model = AutoModelForSequenceClassification.from_pretrained(
+            config.model_name,
+            config=model_config,
+            use_auth_token=config.huggingface_token,
+            trust_remote_code=True,
+        )
+
+    model.resize_token_embeddings(len(tokenizer))
+
+    if config.use_peft:
+        if config.use_int8 or config.use_int4:
+            model = prepare_model_for_int8_training(model)
+        peft_config = LoraConfig(
+            r=config.lora_r,
+            lora_alpha=config.lora_alpha,
+            lora_dropout=config.lora_dropout,
+            bias="none",
+            task_type="CAUSAL_LM",
+            target_modules=utils.get_target_modules(config),
+        )
+        model = get_peft_model(model, peft_config)
+
+    logger.info("creating trainer")
+    # trainer specific
+    if config.logging_steps == -1:
+        if config.valid_split is not None:
+            logging_steps = int(0.2 * len(valid_data) / config.train_batch_size)
+        else:
+            logging_steps = int(0.2 * len(train_data) / config.train_batch_size)
+        if logging_steps == 0:
+            logging_steps = 1
+
+    else:
+        logging_steps = config.logging_steps
+
+    training_args = dict(
+        output_dir=config.project_name,
+        per_device_train_batch_size=config.train_batch_size,
+        per_device_eval_batch_size=config.eval_batch_size,
+        learning_rate=config.learning_rate,
+        num_train_epochs=config.num_train_epochs,
+        evaluation_strategy=config.evaluation_strategy if config.valid_split is not None else "no",
+        logging_steps=logging_steps,
+        save_total_limit=config.save_total_limit,
+        save_strategy=config.save_strategy,
+        gradient_accumulation_steps=config.gradient_accumulation_steps,
+        report_to="tensorboard",
+        auto_find_batch_size=config.auto_find_batch_size,
+        lr_scheduler_type=config.scheduler,
+        optim=config.optimizer,
+        warmup_ratio=config.warmup_ratio,
+        weight_decay=config.weight_decay,
+        max_grad_norm=config.max_grad_norm,
+        fp16=config.fp16,
+        push_to_hub=False,
+        load_best_model_at_end=True if config.valid_split is not None else False,
+    )
+
+    args = TrainingArguments(**training_args)
+
+    early_stop = EarlyStoppingCallback(early_stopping_patience=3, early_stopping_threshold=0.01)
+    callbacks_to_use = [early_stop]
+
+    args = TrainingArguments(**training_args)
+    trainer_args = dict(
+        args=args,
+        model=model,
+        callbacks=callbacks_to_use,
+        compute_metrics=_regression_metrics,
+    )
+
+    trainer = Trainer(
+        **trainer_args,
+        train_dataset=train_dataset,
+        eval_dataset=valid_dataset,
+    )
+    model.config.use_cache = False
+
+    if torch.__version__ >= "2" and sys.platform != "win32":
+        model = torch.compile(model)
+
+    trainer.train()
+
+    logger.info("Finished training, saving model...")
+    trainer.save_model(config.project_name)
+
+    model_card = utils.create_model_card()
+
+    # save model card to output directory as README.md
+    with open(f"{config.project_name}/README.md", "w") as f:
+        f.write(model_card)
+
+    if config.use_peft:
+        logger.info("Merging adapter weights...")
+        utils.merge_adapter(
+            base_model_path=config.model_name,
+            target_model_path=config.project_name,
+            adapter_path=config.project_name,
+        )
+
+    if config.push_to_hub:
+        logger.info("Pushing model to hub...")
+        api = HfApi()
+        api.create_repo(repo_id=config.repo_id, repo_type="model")
+        api.upload_folder(folder_path=config.project_name, repo_id=config.repo_id, repo_type="model")
+
+
+@app_utils.job_watcher
+def train_app(co2_tracker, payload, huggingface_token, model_path):
+    model_repo = app_utils.create_repo(
         project_name=payload["proj_name"],
         autotrain_user=payload["username"],
         huggingface_token=huggingface_token,
@@ -197,13 +385,13 @@ def train(co2_tracker, payload, huggingface_token, model_path):
         validation_metrics=eval_scores,
     )
 
-    utils.save_model_card(model_card, model_path)
+    app_utils.save_model_card(model_card, model_path)
 
     # save model, tokenizer and config
-    model = utils.update_model_config(trainer.model, job_config)
-    utils.save_tokenizer(tokenizer, model_path)
-    utils.save_model(model, model_path)
-    utils.remove_checkpoints(model_path=model_path)
+    model = app_utils.update_model_config(trainer.model, job_config)
+    app_utils.save_tokenizer(tokenizer, model_path)
+    app_utils.save_model(model, model_path)
+    app_utils.remove_checkpoints(model_path=model_path)
 
     # push model to hub
     logger.info("Pushing model to Hub")
