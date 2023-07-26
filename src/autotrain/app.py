@@ -363,7 +363,16 @@ def _update_hub_model_choices(task, model_choice):
             visible=True,
             interactive=True,
         )
-
+    elif task == "text_single_column_regression":
+        choices = [m["id"] for m in hub_models]
+        choices += ["meta-llama/Llama-2-7b-hf"]
+        value = choices[0]
+        return gr.Dropdown.update(
+            choices=choices,
+            value=value,
+            visible=True,
+            interactive=True,
+        )
     return gr.Dropdown.update(
         choices=[m["id"] for m in hub_models],
         value=hub_models[0]["id"],
