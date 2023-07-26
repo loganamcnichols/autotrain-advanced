@@ -31,7 +31,7 @@ def run_src_command_factory(args):
         args.max_grad_norm,
         args.seed,
         args.add_eos_token,
-        args.block_size,
+        args.max_seq_length,
         args.use_peft,
         args.lora_r,
         args.lora_alpha,
@@ -197,11 +197,11 @@ class RunAutoTrainSRCCommand(BaseAutoTrainCommand):
             action="store_true",
         )
         run_src_parser.add_argument(
-            "--block_size",
+            "--max_seq_length",
             help="Block size to use",
             required=False,
             type=int,
-            default=-1,
+            default=128,
         )
         run_src_parser.add_argument(
             "--use_peft",
@@ -359,7 +359,7 @@ class RunAutoTrainSRCCommand(BaseAutoTrainCommand):
         max_grad_norm,
         seed,
         add_eos_token,
-        block_size,
+        max_seq_length,
         use_peft,
         lora_r,
         lora_alpha,
@@ -401,7 +401,7 @@ class RunAutoTrainSRCCommand(BaseAutoTrainCommand):
         self.max_grad_norm = max_grad_norm
         self.seed = seed
         self.add_eos_token = add_eos_token
-        self.block_size = block_size
+        self.max_seq_length = max_seq_length
         self.use_peft = use_peft
         self.lora_r = lora_r
         self.lora_alpha = lora_alpha
@@ -464,7 +464,7 @@ class RunAutoTrainSRCCommand(BaseAutoTrainCommand):
                 max_grad_norm=self.max_grad_norm,
                 seed=self.seed,
                 add_eos_token=self.add_eos_token,
-                block_size=self.block_size,
+                max_seq_length=self.max_seq_length,
                 use_peft=self.use_peft,
                 lora_r=self.lora_r,
                 lora_alpha=self.lora_alpha,
