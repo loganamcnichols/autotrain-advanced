@@ -83,7 +83,7 @@ class Dataset:
         return {
             "input_ids": torch.tensor(ids, dtype=torch.long),
             "attention_mask": torch.tensor(mask, dtype=torch.long),
-            "labels": torch.tensor(target, dtype=torch.long),
+            "labels": torch.tensor(target, dtype=torch.float),
         }
 
 
