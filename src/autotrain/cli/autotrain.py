@@ -20,7 +20,7 @@ def main():
     # Register commands
     RunAutoTrainAppCommand.register_subcommand(commands_parser)
     RunAutoTrainLLMCommand.register_subcommand(commands_parser)
-    RunAutoTrainSCRCommand.register_subcommand(command_parser)
+    RunAutoTrainSCRCommand.register_subcommand(commands_parser)
     RunSetupCommand.register_subcommand(commands_parser)
     RunAutoTrainDreamboothCommand.register_subcommand(commands_parser)
 
