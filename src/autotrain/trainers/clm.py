@@ -25,7 +25,7 @@ from autotrain.trainers.callbacks import LoadBestPeftModelCallback, SavePeftMode
 
 def train(config):
     if isinstance(config, dict):
-        config = utils.LLMTrainingParams(**config)
+        config = utils.LLMRegressionParams(**config)
 
     # TODO: remove when SFT is fixed
     if config.trainer == "sft":

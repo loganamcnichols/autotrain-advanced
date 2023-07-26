@@ -4,13 +4,13 @@ from loguru import logger
 
 from autotrain.infer.text_generation import TextGenerationInference
 
-from ..trainers.clm import train as train_llm
+from ..trainers.regress_command_line import train as train_regress
 from ..trainers.utils import LLMRegressionParams
 from . import BaseAutoTrainCommand
 
 
 def run_llm_command_factory(args):
-    return RunAutoTrainLLMCommand(
+    return RunAutoTrainSCRCommand(
         args.train,
         args.deploy,
         args.inference,
@@ -30,14 +30,7 @@ def run_llm_command_factory(args):
         args.weight_decay,
         args.max_grad_norm,
         args.seed,
-        args.add_eos_token,
-        args.block_size,
         args.use_peft,
-        args.lora_r,
-        args.lora_alpha,
-        args.lora_dropout,
-        args.training_type,
-        args.train_on_inputs,
         args.logging_steps,
         args.project_name,
         args.evaluation_strategy,
@@ -55,7 +48,7 @@ def run_llm_command_factory(args):
     )
 
 
-class RunAutoTrainLLMCommand(BaseAutoTrainCommand):
+class RunAutoTrainSCRCommand(BaseAutoTrainCommand):
     @staticmethod
     def register_subcommand(parser: ArgumentParser):
         run_llm_parser = parser.add_parser(
@@ -191,55 +184,8 @@ class RunAutoTrainLLMCommand(BaseAutoTrainCommand):
             default=42,
         )
         run_llm_parser.add_argument(
-            "--add_eos_token",
-            help="Add EOS token to use",
-            required=False,
-            action="store_true",
-        )
-        run_llm_parser.add_argument(
-            "--block_size",
-            help="Block size to use",
-            required=False,
-            type=int,
-            default=-1,
-        )
-        run_llm_parser.add_argument(
             "--use_peft",
             help="Use PEFT to use",
-            required=False,
-            action="store_true",
-        )
-        run_llm_parser.add_argument(
-            "--lora_r",
-            help="Lora r to use",
-            required=False,
-            type=int,
-            default=16,
-        )
-        run_llm_parser.add_argument(
-            "--lora_alpha",
-            help="Lora alpha to use",
-            required=False,
-            type=int,
-            default=32,
-        )
-        run_llm_parser.add_argument(
-            "--lora_dropout",
-            help="Lora dropout to use",
-            required=False,
-            type=float,
-            default=0.05,
-        )
-        run_llm_parser.add_argument(
-            "--training_type",
-            help="Training type to use",
-            required=False,
-            type=str,
-            default="generic",
-        )
-        run_llm_parser.add_argument(
-            "--train_on_inputs",
-            help="Train on inputs to use",
             required=False,
             action="store_true",
         )
@@ -358,14 +304,7 @@ class RunAutoTrainLLMCommand(BaseAutoTrainCommand):
         weight_decay,
         max_grad_norm,
         seed,
-        add_eos_token,
-        block_size,
         use_peft,
-        lora_r,
-        lora_alpha,
-        lora_dropout,
-        training_type,
-        train_on_inputs,
         logging_steps,
         project_name,
         evaluation_strategy,
@@ -400,14 +339,7 @@ class RunAutoTrainLLMCommand(BaseAutoTrainCommand):
         self.weight_decay = weight_decay
         self.max_grad_norm = max_grad_norm
         self.seed = seed
-        self.add_eos_token = add_eos_token
-        self.block_size = block_size
         self.use_peft = use_peft
-        self.lora_r = lora_r
-        self.lora_alpha = lora_alpha
-        self.lora_dropout = lora_dropout
-        self.training_type = training_type
-        self.train_on_inputs = train_on_inputs
         self.logging_steps = logging_steps
         self.project_name = project_name
         self.evaluation_strategy = evaluation_strategy
@@ -463,14 +395,7 @@ class RunAutoTrainLLMCommand(BaseAutoTrainCommand):
                 weight_decay=self.weight_decay,
                 max_grad_norm=self.max_grad_norm,
                 seed=self.seed,
-                add_eos_token=self.add_eos_token,
-                block_size=self.block_size,
                 use_peft=self.use_peft,
-                lora_r=self.lora_r,
-                lora_alpha=self.lora_alpha,
-                lora_dropout=self.lora_dropout,
-                training_type=self.training_type,
-                train_on_inputs=self.train_on_inputs,
                 logging_steps=self.logging_steps,
                 project_name=self.project_name,
                 evaluation_strategy=self.evaluation_strategy,
@@ -486,4 +411,4 @@ class RunAutoTrainLLMCommand(BaseAutoTrainCommand):
                 trainer=self.trainer,
                 target_modules=self.target_modules,
             )
-            train_llm(params)
+            train_regress(params)
