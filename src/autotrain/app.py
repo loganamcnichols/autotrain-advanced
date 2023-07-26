@@ -364,7 +364,7 @@ def _update_hub_model_choices(task, model_choice):
         )
 
     choices = [m["id"] for m in hub_models]
-    choices += ["meta-llama/Llama-2-7b","meta-llama/Llama-2-70b-hf"]
+    choices += ["meta-llama/Llama-2-7b-hf","meta-llama/Llama-2-70b-hf"]
     return gr.Dropdown.update(
         choices=choices,
         value=hub_models[0]["id"],
