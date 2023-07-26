@@ -12,6 +12,7 @@ from peft import LoraConfig, get_peft_model, prepare_model_for_int8_training
 from transformers import (
     AutoConfig,
     AutoModelForSequenceClassification,
+    BitsAndBytesConfig,
     AutoTokenizer,
     EarlyStoppingCallback,
     Trainer,
@@ -20,10 +21,12 @@ from transformers import (
 )
 
 from autotrain.trainers import utils
+from autotrain.trainers.callbacks import LoadBestPeftModelCallback, SavePeftModelCallback
 
 
-TEXT_COLUMN = "autotrain_text"
-LABEL_COLUMN = "autotrain_label"
+
+TEXT_COLUMN = "short_text"
+LABEL_COLUMN = "target"
 FP32_MODELS = ("t5", "mt5", "pegasus", "longt5", "bigbird_pegasus")
 
 class Dataset:
@@ -56,14 +59,14 @@ class Dataset:
         if token_type_ids is not None:
             return {
                 "input_ids": torch.tensor(ids, dtype=torch.long),
-                "attention_mask": torch.tensor(mask, dtype=torch.long),
+                "attention_mask": torch.tensor(mask, dtype=torch.float),
                 "token_type_ids": torch.tensor(token_type_ids, dtype=torch.long),
                 "labels": torch.tensor(target, dtype=torch.float),
             }
         return {
             "input_ids": torch.tensor(ids, dtype=torch.long),
-            "attention_mask": torch.tensor(mask, dtype=torch.long),
-            "labels": torch.tensor(target, dtype=torch.long),
+            "attention_mask": torch.tensor(mask, dtype=torch.float),
+            "labels": torch.tensor(target, dtype=torch.float),
         }
 
 def _regression_metrics(pred):
@@ -117,6 +120,18 @@ def train(config):
         use_auth_token=config.huggingface_token,
         trust_remote_code=True,
     )
+    tokenizer.pad_token = tokenizer.eos_token
+
+    # train_data = utils.process_data(
+    #     data=train_data,
+    #     tokenizer=tokenizer,
+    #     config=config,
+    # )
+    # valid_data = utils.process_data(
+    #     data=valid_data,
+    #     tokenizer=tokenizer,
+    #     config=config,
+    # )
 
     if tokenizer.model_max_length > 2048:
         tokenizer.model_max_length = config.model_max_length
@@ -132,14 +147,36 @@ def train(config):
 
     model_config.num_labels = 1
 
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16,
+        bnb_4bit_use_double_quant=False,
+    )
+
     model = AutoModelForSequenceClassification.from_pretrained(
         config.model_name,
         config=model_config,
         use_auth_token=config.huggingface_token,
+        quantization_config=bnb_config,
+        torch_dtype=torch.float16,
+        device_map="auto",
         trust_remote_code=True,
     )
 
+    model = prepare_model_for_int8_training(model)
+
     model.resize_token_embeddings(len(tokenizer))
+
+    peft_config = LoraConfig(
+        r=config.lora_r,
+        lora_alpha=config.lora_alpha,
+        lora_dropout=config.lora_dropout,
+        bias="none",
+        task_type="SEQ_CLS",
+        target_modules=utils.get_target_modules(config),
+    )
+    model = get_peft_model(model, peft_config)
 
     logger.info("creating trainer")
     # trainer specific
@@ -177,8 +214,7 @@ def train(config):
         load_best_model_at_end=True if config.valid_split is not None else False,
     )
 
-    early_stop = EarlyStoppingCallback(early_stopping_patience=3, early_stopping_threshold=0.01)
-    callbacks_to_use = [early_stop]
+    callbacks_to_use = [SavePeftModelCallback, LoadBestPeftModelCallback]
 
     args = TrainingArguments(**training_args)
 
@@ -198,6 +234,17 @@ def train(config):
 
     if torch.__version__ >= "2" and sys.platform != "win32":
         model = torch.compile(model)
+
+    for name, module in trainer.model.named_modules():
+      # if isinstance(module, LoraLayer):
+      #     if script_args.bf16:
+      #         module = module.to(torch.bfloat16)
+      if "norm" in name:
+          module = module.to(torch.float32)
+      # if "lm_head" in name or "embed_tokens" in name:
+      #     if hasattr(module, "weight"):
+      #         if script_args.bf16 and module.weight.dtype == torch.float32:
+      #             module = module.to(torch.bfloat16)
 
     trainer.train()
 
