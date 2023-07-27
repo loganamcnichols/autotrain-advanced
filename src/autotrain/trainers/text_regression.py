@@ -104,6 +104,8 @@ def _regression_metrics(pred):
 
 
 def train(config):
+    TEXT_COLUMN = "short_text"
+    LABEL_COLUMN = "target"
     if isinstance(config, dict):
         config = cli_utils.LLMTrainingParams(**config)
 
@@ -149,6 +151,9 @@ def train(config):
 
     if getattr(tokenizer, "pad_token", None) is None:
         tokenizer.pad_token = tokenizer.eos_token
+
+    train_dataset = Dataset(train_data, tokenizer=tokenizer, config=config)
+    valid_dataset = Dataset(valid_data, tokenizer=tokenizer, config=config)
 
     model_config = AutoConfig.from_pretrained(
         config.model_name,
@@ -196,8 +201,8 @@ def train(config):
             lora_alpha=config.lora_alpha,
             lora_dropout=config.lora_dropout,
             bias="none",
-            task_type="CAUSAL_LM",
-            target_modules=utils.get_target_modules(config),
+            task_type="SEQ_CLS",
+            target_modules=cli_utils.get_target_modules(config),
         )
         model = get_peft_model(model, peft_config)
 
