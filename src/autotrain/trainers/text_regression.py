@@ -161,6 +161,8 @@ def train(config):
         trust_remote_code=True,
     )
 
+    model_config.num_labels = 1
+
     if config.use_peft:
         if config.use_int4:
             bnb_config = BitsAndBytesConfig(
@@ -270,7 +272,7 @@ def train(config):
     logger.info("Finished training, saving model...")
     trainer.save_model(config.project_name)
 
-    model_card = utils.create_model_card()
+    model_card = cli_utils.create_model_card()
 
     # save model card to output directory as README.md
     with open(f"{config.project_name}/README.md", "w") as f:
@@ -278,7 +280,7 @@ def train(config):
 
     if config.use_peft:
         logger.info("Merging adapter weights...")
-        utils.merge_adapter(
+        cli_utils.merge_adapter(
             base_model_path=config.model_name,
             target_model_path=config.project_name,
             adapter_path=config.project_name,
