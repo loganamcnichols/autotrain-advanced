@@ -106,6 +106,11 @@ def _regression_metrics(pred):
 def train(config):
     TEXT_COLUMN = "short_text"
     LABEL_COLUMN = "target"
+
+    # Set the seeds for reproducibility
+    torch.cuda.manual_seed(config.seed)
+    torch.manual_seed(config.seed)
+
     if isinstance(config, dict):
         config = cli_utils.LLMTrainingParams(**config)
 
@@ -163,19 +168,37 @@ def train(config):
 
     model_config.num_labels = 1
 
-    if config.use_peft:
-        if config.use_int4:
-            bnb_config = BitsAndBytesConfig(
-                load_in_4bit=config.use_int4,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.float16,
-                bnb_4bit_use_double_quant=False,
-            )
-        elif config.use_int8:
-            bnb_config = BitsAndBytesConfig(load_in_8bit=config.use_int8)
-        else:
-            bnb_config = BitsAndBytesConfig()
-
+    if config.use_int4:
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=config.use_int4,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_use_double_quant=False,
+        )
+        model = AutoModelForSequenceClassification.from_pretrained(
+            config.model_name,
+            config=model_config,
+            use_auth_token=config.huggingface_token,
+            quantization_config=bnb_config,
+            torch_dtype=torch.float16,
+            device_map="auto",
+            trust_remote_code=True,
+        )
+        prepare_model_for_int8_training(model)
+    elif config.use_int8:
+        bnb_config = BitsAndBytesConfig(load_in_8bit=config.use_int8)
+        model = AutoModelForSequenceClassification.from_pretrained(
+            config.model_name,
+            config=model_config,
+            use_auth_token=config.huggingface_token,
+            quantization_config=bnb_config,
+            torch_dtype=torch.float16,
+            device_map="auto",
+            trust_remote_code=True,
+        )
+        prepare_model_for_int8_training(model)
+    elif config.use_peft:
+        bnb_config = BitsAndBytesConfig()
         model = AutoModelForSequenceClassification.from_pretrained(
             config.model_name,
             config=model_config,
@@ -196,8 +219,6 @@ def train(config):
     model.resize_token_embeddings(len(tokenizer))
 
     if config.use_peft:
-        if config.use_int8 or config.use_int4:
-            model = prepare_model_for_int8_training(model)
         peft_config = LoraConfig(
             r=config.lora_r,
             lora_alpha=config.lora_alpha,
