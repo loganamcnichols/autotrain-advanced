@@ -6,6 +6,7 @@ from datasets import load_dataset
 from datasets import Dataset as DS
 from loguru import logger
 from sklearn import metrics
+from huggingface_hub import HfApi
 from peft import LoraConfig, get_peft_model, prepare_model_for_int8_training
 from transformers import (
     AutoConfig,
