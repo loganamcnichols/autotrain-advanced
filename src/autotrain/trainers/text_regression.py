@@ -105,6 +105,9 @@ def _regression_metrics(pred):
 
 
 def train(config):
+    # Set the seeds for reproducibility
+    torch.cuda.manual_seed(config.seed)
+    torch.manual_seed(config.seed)
     TEXT_COLUMN = "short_text"
     LABEL_COLUMN = "target"
     if isinstance(config, dict):
