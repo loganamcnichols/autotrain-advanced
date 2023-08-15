@@ -363,7 +363,7 @@ def train_app(co2_tracker, payload, huggingface_token, model_path):
         max_grad_norm=job_config.max_grad_norm,
     )
 
-    early_stop = EarlyStoppingCallback(early_stopping_patience=3, early_stopping_threshold=0.01)
+    early_stop = EarlyStoppingCallback(early_stopping_patience=5, early_stopping_threshold=0.01)
     callbacks_to_use = [early_stop]
 
     args = TrainingArguments(**training_args)
