@@ -250,7 +250,7 @@ def train(config):
 
     args = TrainingArguments(**training_args)
 
-    early_stop = EarlyStoppingCallback(early_stopping_patience=5, early_stopping_threshold=0.01)
+    early_stop = EarlyStoppingCallback(early_stopping_patience=10, early_stopping_threshold=0.01)
     callbacks_to_use = [early_stop]
 
     args = TrainingArguments(**training_args)
