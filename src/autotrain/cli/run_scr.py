@@ -3,14 +3,14 @@ from argparse import ArgumentParser
 from loguru import logger
 
 from autotrain.infer.text_generation import TextGenerationInference
-
-from ..trainers.text_regression import train as train_src
-from ..trainers.utils import SRCTrainingParams
+    
+from autotrain.trainers.scr.__main__ import train as train_src
+from autotrain.trainers.scr.params import SCRTrainingParams
 from . import BaseAutoTrainCommand
 
 
 def run_src_command_factory(args):
-    return RunAutoTrainSRCCommand(
+    return RunAutoTrainSCRCommand(
         args.train,
         args.deploy,
         args.inference,
@@ -55,12 +55,12 @@ def run_src_command_factory(args):
     )
 
 
-class RunAutoTrainSRCCommand(BaseAutoTrainCommand):
+class RunAutoTrainSCRCommand(BaseAutoTrainCommand):
     @staticmethod
     def register_subcommand(parser: ArgumentParser):
         run_src_parser = parser.add_parser(
             "src",
-            description="✨ Run AutoTrain SRC training/inference/deployment",
+            description="✨ Run AutoTrain SCR training/inference/deployment",
         )
         run_src_parser.add_argument(
             "--train",
@@ -443,10 +443,10 @@ class RunAutoTrainSRCCommand(BaseAutoTrainCommand):
                 print(f"Bot: {tgi.chat(prompt)}")
 
     def run(self):
-        logger.info("Running SRC")
+        logger.info("Running SCR")
         logger.info(f"Train: {self.train}")
         if self.train:
-            params = SRCTrainingParams(
+            params = SCRTrainingParams(
                 model_name=self.model,
                 data_path=self.data_path,
                 train_split=self.train_split,
