@@ -89,6 +89,7 @@ def train(config):
     )
 
     model_config.num_labels = 1
+    model_config.pad_token = model_config.eos_token
 
     if config.use_peft:
         if config.use_int4:

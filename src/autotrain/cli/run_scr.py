@@ -19,12 +19,12 @@ def run_scr_command_factory(args):
         args.valid_split,
         args.text_column,
         args.model,
-        args.learning_rate,
-        args.num_train_epochs,
-        args.train_batch_size,
+        args.lr,
+        args.epochs,
+        args.batch_size,
         args.eval_batch_size,
         args.warmup_ratio,
-        args.gradient_accumulation_steps,
+        args.gradient_accumulation,
         args.optimizer,
         args.scheduler,
         args.weight_decay,
@@ -52,6 +52,7 @@ def run_scr_command_factory(args):
         args.use_int4,
         args.trainer,
         args.target_modules,
+        args.username,
     )
 
 
@@ -114,21 +115,21 @@ class RunAutoTrainSCRCommand(BaseAutoTrainCommand):
             type=str,
         )
         run_scr_parser.add_argument(
-            "--learning_rate",
+            "--lr",
             help="Learning rate to use",
             required=False,
             type=float,
             default=3e-5,
         )
         run_scr_parser.add_argument(
-            "--num_train_epochs",
+            "--epochs",
             help="Number of training epochs to use",
             required=False,
             type=int,
             default=1,
         )
         run_scr_parser.add_argument(
-            "--train_batch_size",
+            "--batch_size",
             help="Training batch size to use",
             required=False,
             type=int,
@@ -149,7 +150,7 @@ class RunAutoTrainSCRCommand(BaseAutoTrainCommand):
             default=0.1,
         )
         run_scr_parser.add_argument(
-            "--gradient_accumulation_steps",
+            "--gradient_accumulation",
             help="Gradient accumulation steps to use",
             required=False,
             type=int,
@@ -334,7 +335,13 @@ class RunAutoTrainSCRCommand(BaseAutoTrainCommand):
             type=str,
             default=None,
         )
-
+        run_scr_parser.add_argument(
+            "--username",
+            help="Huggingface Username",
+            required=False,
+            type=str,
+            default=None,
+        )
         run_scr_parser.set_defaults(func=run_scr_command_factory)
 
     def __init__(
@@ -347,12 +354,12 @@ class RunAutoTrainSCRCommand(BaseAutoTrainCommand):
         valid_split,
         text_column,
         model,
-        learning_rate,
-        num_train_epochs,
-        train_batch_size,
+        lr,
+        epochs,
+        batch_size,
         eval_batch_size,
         warmup_ratio,
-        gradient_accumulation_steps,
+        gradient_accumulation,
         optimizer,
         scheduler,
         weight_decay,
@@ -380,6 +387,7 @@ class RunAutoTrainSCRCommand(BaseAutoTrainCommand):
         use_int4,
         trainer,
         target_modules,
+        username,
     ):
         self.train = train
         self.deploy = deploy
@@ -389,12 +397,12 @@ class RunAutoTrainSCRCommand(BaseAutoTrainCommand):
         self.valid_split = valid_split
         self.text_column = text_column
         self.model = model
-        self.learning_rate = learning_rate
-        self.num_train_epochs = num_train_epochs
-        self.train_batch_size = train_batch_size
+        self.lr = lr
+        self.epochs = epochs
+        self.batch_size = batch_size
         self.eval_batch_size = eval_batch_size
         self.warmup_ratio = warmup_ratio
-        self.gradient_accumulation_steps = gradient_accumulation_steps
+        self.gradient_accumulation = gradient_accumulation
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.weight_decay = weight_decay
@@ -422,6 +430,7 @@ class RunAutoTrainSCRCommand(BaseAutoTrainCommand):
         self.use_int4 = use_int4
         self.trainer = trainer
         self.target_modules = target_modules
+        self.username = username
 
         if self.train:
             if self.project_name is None:
@@ -447,17 +456,17 @@ class RunAutoTrainSCRCommand(BaseAutoTrainCommand):
         logger.info(f"Train: {self.train}")
         if self.train:
             params = SCRTrainingParams(
-                model_name=self.model,
+                model=self.model,
                 data_path=self.data_path,
                 train_split=self.train_split,
                 valid_split=self.valid_split,
                 text_column=self.text_column,
-                learning_rate=self.learning_rate,
-                num_train_epochs=self.num_train_epochs,
-                train_batch_size=self.train_batch_size,
+                lr=self.lr,
+                epochs=self.epochs,
+                batch_size=self.batch_size,
                 eval_batch_size=self.eval_batch_size,
                 warmup_ratio=self.warmup_ratio,
-                gradient_accumulation_steps=self.gradient_accumulation_steps,
+                gradient_accumulation=self.gradient_accumulation,
                 optimizer=self.optimizer,
                 scheduler=self.scheduler,
                 weight_decay=self.weight_decay,
@@ -485,5 +494,6 @@ class RunAutoTrainSCRCommand(BaseAutoTrainCommand):
                 use_int4=self.use_int4,
                 trainer=self.trainer,
                 target_modules=self.target_modules,
+                username=self.username,
             )
             train_scr(params)
