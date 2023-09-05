@@ -4,12 +4,12 @@ from loguru import logger
 
 from autotrain.infer.text_generation import TextGenerationInference
     
-from autotrain.trainers.scr.__main__ import train as train_src
+from autotrain.trainers.scr.__main__ import train as train_scr
 from autotrain.trainers.scr.params import SCRTrainingParams
 from . import BaseAutoTrainCommand
 
 
-def run_src_command_factory(args):
+def run_scr_command_factory(args):
     return RunAutoTrainSCRCommand(
         args.train,
         args.deploy,
@@ -58,276 +58,276 @@ def run_src_command_factory(args):
 class RunAutoTrainSCRCommand(BaseAutoTrainCommand):
     @staticmethod
     def register_subcommand(parser: ArgumentParser):
-        run_src_parser = parser.add_parser(
+        run_scr_parser = parser.add_parser(
             "src",
             description="✨ Run AutoTrain SCR training/inference/deployment",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--train",
             help="Train the model",
             required=False,
             action="store_true",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--deploy",
             help="Deploy the model",
             required=False,
             action="store_true",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--inference",
             help="Run inference",
             required=False,
             action="store_true",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--data_path",
             help="Train dataset to use",
             required=False,
             type=str,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--train_split",
             help="Test dataset split to use",
             required=False,
             type=str,
             default="train",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--valid_split",
             help="Validation dataset split to use",
             required=False,
             type=str,
             default=None,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--text_column",
             help="Text column to use",
             required=False,
             type=str,
             default="text",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--model",
             help="Model to use",
             required=False,
             type=str,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--learning_rate",
             help="Learning rate to use",
             required=False,
             type=float,
             default=3e-5,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--num_train_epochs",
             help="Number of training epochs to use",
             required=False,
             type=int,
             default=1,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--train_batch_size",
             help="Training batch size to use",
             required=False,
             type=int,
             default=2,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--eval_batch_size",
             help="Evaluation batch size to use",
             required=False,
             type=int,
             default=4,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--warmup_ratio",
             help="Warmup proportion to use",
             required=False,
             type=float,
             default=0.1,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--gradient_accumulation_steps",
             help="Gradient accumulation steps to use",
             required=False,
             type=int,
             default=1,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--optimizer",
             help="Optimizer to use",
             required=False,
             type=str,
             default="adamw_torch",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--scheduler",
             help="Scheduler to use",
             required=False,
             type=str,
             default="linear",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--weight_decay",
             help="Weight decay to use",
             required=False,
             type=float,
             default=0.0,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--max_grad_norm",
             help="Max gradient norm to use",
             required=False,
             type=float,
             default=1.0,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--seed",
             help="Seed to use",
             required=False,
             type=int,
             default=42,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--add_eos_token",
             help="Add EOS token to use",
             required=False,
             action="store_true",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--max_seq_length",
             help="Block size to use",
             required=False,
             type=int,
             default=128,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--use_peft",
             help="Use PEFT to use",
             required=False,
             action="store_true",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--lora_r",
             help="Lora r to use",
             required=False,
             type=int,
             default=16,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--lora_alpha",
             help="Lora alpha to use",
             required=False,
             type=int,
             default=32,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--lora_dropout",
             help="Lora dropout to use",
             required=False,
             type=float,
             default=0.05,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--training_type",
             help="Training type to use",
             required=False,
             type=str,
             default="generic",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--train_on_inputs",
             help="Train on inputs to use",
             required=False,
             action="store_true",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--logging_steps",
             help="Logging steps to use",
             required=False,
             type=int,
             default=-1,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--project_name",
             help="Output directory",
             required=False,
             type=str,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--evaluation_strategy",
             help="Evaluation strategy to use",
             required=False,
             type=str,
             default="epoch",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--save_total_limit",
             help="Save total limit to use",
             required=False,
             type=int,
             default=1,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--save_strategy",
             help="Save strategy to use",
             required=False,
             type=str,
             default="epoch",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--auto_find_batch_size",
             help="Auto find batch size True/False",
             required=False,
             action="store_true",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--fp16",
             help="FP16 True/False",
             required=False,
             action="store_true",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--push_to_hub",
             help="Push to hub True/False",
             required=False,
             action="store_true",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--use_int8",
             help="Use int8 True/False",
             required=False,
             action="store_true",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--model_max_length",
             help="Model max length to use",
             required=False,
             type=int,
             default=1024,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--repo_id",
             help="Repo id for hugging face hub",
             required=False,
             type=str,
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--use_int4",
             help="Use int4 True/False",
             required=False,
             action="store_true",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--trainer",
             help="Trainer type to use",
             required=False,
             type=str,
             default="default",
         )
-        run_src_parser.add_argument(
+        run_scr_parser.add_argument(
             "--target_modules",
             help="Target modules to use",
             required=False,
@@ -335,7 +335,7 @@ class RunAutoTrainSCRCommand(BaseAutoTrainCommand):
             default=None,
         )
 
-        run_src_parser.set_defaults(func=run_src_command_factory)
+        run_scr_parser.set_defaults(func=run_scr_command_factory)
 
     def __init__(
         self,
@@ -486,4 +486,4 @@ class RunAutoTrainSCRCommand(BaseAutoTrainCommand):
                 trainer=self.trainer,
                 target_modules=self.target_modules,
             )
-            train_src(params)
+            train_scr(params)
