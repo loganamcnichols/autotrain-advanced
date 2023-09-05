@@ -5,6 +5,8 @@ from .run_api import RunAutoTrainAPICommand
 from .run_app import RunAutoTrainAppCommand
 from .run_dreambooth import RunAutoTrainDreamboothCommand
 from .run_image_classification import RunAutoTrainImageClassificationCommand
+from .run_image_regression import RunAutoTrainImageRegressionCommand
+
 from .run_llm import RunAutoTrainLLMCommand
 from .run_scr import RunAutoTrainSCRCommand
 from .run_setup import RunSetupCommand
@@ -31,6 +33,7 @@ def main():
     RunAutoTrainAPICommand.register_subcommand(commands_parser)
     RunAutoTrainTextClassificationCommand.register_subcommand(commands_parser)
     RunAutoTrainImageClassificationCommand.register_subcommand(commands_parser)
+    RunAutoTrainImageRegressionCommand.register_subcommand(commands_parser)
     RunAutoTrainTabularCommand.register_subcommand(commands_parser)
     RunAutoTrainSpaceRunnerCommand.register_subcommand(commands_parser)
 

@@ -3,7 +3,7 @@ import os
 from pydantic import BaseModel, Field
 
 
-class ImageClassificationParams(BaseModel):
+class ImageRegressionParams(BaseModel):
     data_path: str = Field(None, title="Data path")
     model_name: str = Field("bert-base-uncased", title="Model name")
     lr: float = Field(5e-5, title="Learning rate")
