@@ -133,7 +133,7 @@ def train(config):
     trainer.save_model(config.project_name)
     image_processor.save_pretrained(config.project_name)
 
-    model_card = utils.create_model_card(config, trainer, num_classes)
+    model_card = utils.create_model_card(config, trainer, 1)
 
     # save model card to output directory as README.md
     with open(f"{config.project_name}/README.md", "w") as f:

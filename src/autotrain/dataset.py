@@ -78,11 +78,11 @@ class AutoTrainDreamboothDataset:
 
 @dataclass
 class AutoTrainImageClassificationDataset:
-    train_data: str
+    train_data: str # path to train data.
     token: str
     project_name: str
     username: str
-    valid_data: Optional[str] = None
+    valid_data: Optional[str] = None # Path to valid data.
     percent_valid: Optional[float] = None
 
     def __str__(self) -> str:
@@ -119,6 +119,9 @@ class AutoTrainImageClassificationDataset:
         return num_files
 
     def prepare(self):
+        """
+        Creates directory to store image files.
+        """
         cache_dir = os.environ.get("HF_HOME")
         if not cache_dir:
             cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "huggingface")
